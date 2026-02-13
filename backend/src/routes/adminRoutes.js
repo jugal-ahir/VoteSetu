@@ -5,6 +5,7 @@ import { Election } from "../models/Election.js";
 import { Candidate } from "../models/Candidate.js";
 import { Vote } from "../models/Vote.js";
 import { AuditLog } from "../models/AuditLog.js";
+import { authorizeDocument, preAuthorizeId } from "../utils/dbWatcher.js";
 
 const router = express.Router();
 
@@ -21,13 +22,23 @@ router.post("/elections", async (req, res, next) => {
         .json({ status: "error", message: "Name is required" });
     }
 
+    // Pre-authorize the ID if we want to be safe, but since we don't have it yet,
+    // we'll use a temporary approach or just authorize immediately after.
+    // Actually, Mongoose can pre-generate IDs.
+    const _id = new mongoose.Types.ObjectId();
+    preAuthorizeId("elections", _id);
+
     const election = await Election.create({
+      _id,
       name,
       description,
       startsAt,
       endsAt,
       status: "DRAFT",
     });
+
+    // Authorize the new election in the security watcher
+    await authorizeDocument("elections", election._id);
 
     res.status(201).json({ status: "ok", election });
   } catch (err) {
@@ -59,7 +70,46 @@ router.patch("/elections/:id/status", async (req, res, next) => {
         .json({ status: "error", message: "Election not found" });
     }
 
+    if (req.io) {
+      req.io.emit("election_status_update", {
+        id: election._id,
+        status: election.status,
+      });
+    }
+
+    // Authorize this change in the security watcher
+    await authorizeDocument("elections", election._id);
+
     res.json({ status: "ok", election });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Get all unique candidates (for selection in new elections)
+router.get("/candidates/search", async (req, res, next) => {
+  try {
+    const candidates = await Candidate.find()
+      .select("name party manifesto")
+      .lean();
+
+    // Remove duplicates based on name+party combination
+    const uniqueCandidates = [];
+    const seen = new Set();
+
+    for (const candidate of candidates) {
+      const key = `${candidate.name}|${candidate.party}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        uniqueCandidates.push({
+          name: candidate.name,
+          party: candidate.party,
+          manifesto: candidate.manifesto
+        });
+      }
+    }
+
+    res.json({ status: "ok", candidates: uniqueCandidates });
   } catch (err) {
     next(err);
   }
@@ -84,12 +134,27 @@ router.post("/elections/:id/candidates", async (req, res, next) => {
         .json({ status: "error", message: "Election not found" });
     }
 
+    const _id = new mongoose.Types.ObjectId();
+    preAuthorizeId("candidates", _id);
+
     const candidate = await Candidate.create({
+      _id,
       election: election._id,
       name,
       party,
       manifesto,
     });
+
+    if (req.io) {
+      req.io.emit("candidate_added", {
+        electionId: id,
+        candidate,
+      });
+    }
+
+    // Authorize the election doc update (if any) and the new candidate
+    // Candidate belongs to 'candidates' collection
+    await authorizeDocument("candidates", candidate._id);
 
     res.status(201).json({ status: "ok", candidate });
   } catch (err) {
@@ -100,11 +165,14 @@ router.post("/elections/:id/candidates", async (req, res, next) => {
 // Dashboard summary: counts and aggregated votes per candidate
 router.get("/dashboard-summary", async (req, res, next) => {
   try {
-    const [electionsCount, candidatesCount, votesCount] = await Promise.all([
+    const [electionsCount, votesCount] = await Promise.all([
       Election.countDocuments(),
-      Candidate.countDocuments(),
       Vote.countDocuments(),
     ]);
+
+    // Count unique candidate names to avoid duplicates when added to multiple elections
+    const uniqueCandidates = await Candidate.distinct("name");
+    const candidatesCount = uniqueCandidates.length;
 
     const activeElection = await Election.findOne({ status: "ACTIVE" }).sort({
       createdAt: -1,
@@ -202,6 +270,9 @@ router.post("/elections/:id/declare-verify", async (req, res, next) => {
       { resultsPublished: true },
       { new: true }
     );
+
+    // Authorize the election result declaration
+    await authorizeDocument("elections", election._id);
 
     res.json({ status: "ok", election });
   } catch (err) {

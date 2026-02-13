@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { FileText, ShieldAlert, Search, Filter, Loader2 } from "lucide-react";
+import { FileText, ShieldAlert, Search, Filter, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { api } from "../lib/api.js";
 
 export function LogsViewerPage() {
@@ -9,13 +9,19 @@ export function LogsViewerPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("");
 
+  // Pagination State
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [limit] = useState(20);
+
   useEffect(() => {
     fetchLogs();
-  }, []);
+  }, [page]);
 
   const fetchLogs = async () => {
+    setLoading(true);
     try {
-      const res = await api.get("/admin/logs?limit=100");
+      const res = await api.get(`/admin/logs?page=${page}&limit=${limit}`);
       setLogs(
         (res.data.items || []).map((item) => ({
           id: item._id,
@@ -26,6 +32,9 @@ export function LogsViewerPage() {
           status: item.status,
         }))
       );
+      // Construct total pages from total count
+      const totalDocs = res.data.total || 0;
+      setTotalPages(Math.ceil(totalDocs / limit));
     } catch (err) {
       setError("Unable to load security logs.");
     } finally {
@@ -51,7 +60,7 @@ export function LogsViewerPage() {
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
           <input
-            placeholder="Search logs..."
+            placeholder="Search current view..."
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             className="pl-10 pr-4 py-2 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:border-emerald-500 outline-none w-full md:w-64"
@@ -104,7 +113,31 @@ export function LogsViewerPage() {
               </tbody>
             </table>
           </div>
-          {filteredLogs.length === 0 && (
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between border-t border-slate-800 p-4">
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium text-slate-400 hover:bg-slate-800 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronLeft className="h-4 w-4" /> Previous
+              </button>
+              <div className="text-xs font-medium text-slate-500">
+                Page <span className="text-white">{page}</span> of <span className="text-white">{totalPages}</span>
+              </div>
+              <button
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium text-slate-400 hover:bg-slate-800 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Next <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+
+          {filteredLogs.length === 0 && !loading && (
             <div className="p-12 text-center text-slate-500">
               No logs found matching your criteria.
             </div>

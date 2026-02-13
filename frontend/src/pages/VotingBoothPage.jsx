@@ -5,6 +5,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { api } from "../lib/api.js";
 import { useAuthStore } from "../store/authStore.js";
 import { ConfirmModal } from "../components/ConfirmModal.jsx";
+import { socket } from "../App.jsx";
 
 export function VotingBoothPage() {
   const navigate = useNavigate();
@@ -27,6 +28,20 @@ export function VotingBoothPage() {
 
   React.useEffect(() => {
     fetchData();
+
+    // Socket listeners for real-time updates
+    socket.on("election_status_update", () => {
+      fetchData();
+    });
+
+    socket.on("candidate_added", () => {
+      fetchData();
+    });
+
+    return () => {
+      socket.off("election_status_update");
+      socket.off("candidate_added");
+    };
   }, []);
 
   const fetchData = async () => {

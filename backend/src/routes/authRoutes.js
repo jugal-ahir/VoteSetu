@@ -8,6 +8,7 @@ import { signAccessToken } from "../utils/jwt.js";
 import { logSecurityEvent } from "../middleware/auditLogger.js";
 import { sha256 } from "../utils/crypto.js";
 import { v4 as uuidv4 } from "uuid";
+import { authorizeDocument, preAuthorizeId } from "../utils/dbWatcher.js";
 
 const router = express.Router();
 
@@ -106,7 +107,11 @@ router.post("/register", async (req, res, next) => {
     const verificationId = `REG-DLK-${uuidv4().slice(0, 4).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000).toString()}`;
     const maskedAadhaar = aadhaarId.replace(/^(\d{4})\d{4}(\d{4})$/, "$1XXXX$2");
 
+    const _id = new mongoose.Types.ObjectId();
+    preAuthorizeId("users", _id);
+
     const user = await User.create({
+      _id,
       name,
       email,
       voterId,
@@ -115,6 +120,9 @@ router.post("/register", async (req, res, next) => {
       digilockerStatus: "VERIFIED",
       digilockerVerificationId: verificationId
     });
+
+    // Authorize new user
+    await authorizeDocument("users", user._id);
 
     await DigiLockerVerification.create({
       user: user._id,
@@ -191,6 +199,7 @@ router.post("/login", loginLimiter, async (req, res, next) => {
         user.lockedUntil = new Date(Date.now() + 15 * 60 * 1000);
       }
       await user.save();
+      await authorizeDocument("users", user._id);
 
       await logSecurityEvent({
         req,
@@ -219,6 +228,7 @@ router.post("/login", loginLimiter, async (req, res, next) => {
       lockedUntil: undefined,
     };
     await user.save();
+    await authorizeDocument("users", user._id);
 
     // In real system send via email/SMS provider. Here we log to console.
     console.log(`Simulated OTP for voterId=${user.voterId}: ${otp}`);
@@ -299,6 +309,7 @@ router.post("/verify-otp", otpLimiter, async (req, res, next) => {
         user.otp.lockedUntil = new Date(Date.now() + 15 * 60 * 1000);
       }
       await user.save();
+      await authorizeDocument("users", user._id);
 
       await logSecurityEvent({
         req,
@@ -316,6 +327,7 @@ router.post("/verify-otp", otpLimiter, async (req, res, next) => {
     // OTP ok -> issue JWT
     user.otp = undefined;
     await user.save();
+    await authorizeDocument("users", user._id);
 
     const token = signAccessToken({
       sub: user._id.toString(),

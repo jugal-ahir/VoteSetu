@@ -1,7 +1,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { KeyRound, ShieldCheck, UserCheck, Lock } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../lib/api.js";
 import { useAuthStore } from "../store/authStore.js";
 
@@ -12,6 +12,13 @@ export function LoginPage() {
   const [error, setError] = React.useState("");
   const navigate = useNavigate();
   const setAuth = useAuthStore((s) => s.setAuth);
+  const [searchParams] = useSearchParams();
+
+  React.useEffect(() => {
+    if (searchParams.get("session") === "expired") {
+      setError("Your session has expired. Please login again.");
+    }
+  }, [searchParams]);
 
   const onChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));

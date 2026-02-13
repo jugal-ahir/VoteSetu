@@ -2,6 +2,7 @@ import express from "express";
 import mongoose from "mongoose";
 import { requireAuth } from "../middleware/auth.js";
 import { Election } from "../models/Election.js";
+import { authorizeDocument, preAuthorizeId } from "../utils/dbWatcher.js";
 import { Candidate } from "../models/Candidate.js";
 import { Vote } from "../models/Vote.js";
 import {
@@ -201,7 +202,11 @@ router.post("/cast", requireAuth, async (req, res, next) => {
     const previousHash = lastVote?.hash || null;
     const chainHash = sha256(receiptHash + (previousHash || ""));
 
+    const _id = new mongoose.Types.ObjectId();
+    preAuthorizeId("votes", _id);
+
     const voteDoc = await Vote.create({
+      _id,
       voter: user._id,
       election: election._id,
       candidate: candidate._id,
@@ -216,6 +221,9 @@ router.post("/cast", requireAuth, async (req, res, next) => {
     user.votedElections.push(election._id);
     await user.save();
 
+    // Authorize the user document update
+    await authorizeDocument("users", user._id);
+
     await logSecurityEvent({
       req,
       action: "VOTE_CAST_ENCRYPTED",
@@ -227,6 +235,17 @@ router.post("/cast", requireAuth, async (req, res, next) => {
         voteId: voteDoc._id.toString(),
       },
     });
+
+    // Emit live update
+    if (req.io) {
+      req.io.emit("vote_update", {
+        electionId: election._id,
+        candidateId: candidate._id,
+      });
+    }
+
+    // Authorize the new vote in the security watcher
+    await authorizeDocument("votes", voteDoc._id);
 
     res.status(201).json({
       status: "ok",

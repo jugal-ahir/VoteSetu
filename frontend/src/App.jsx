@@ -1,6 +1,6 @@
 import React from "react";
 import { Routes, Route, Navigate, Link, useLocation, useNavigate } from "react-router-dom";
-import { ShieldCheck, Moon, SunMedium, LogOut, User, History } from "lucide-react";
+import { Moon, SunMedium, LogOut, User, History } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { LandingPage } from "./pages/LandingPage.jsx";
 import { RegisterPage } from "./pages/RegisterPage.jsx";
@@ -12,9 +12,19 @@ import { AdminDashboardPage } from "./pages/AdminDashboardPage.jsx";
 import { LogsViewerPage } from "./pages/LogsViewerPage.jsx";
 import { UserHistoryPage } from "./pages/UserHistoryPage.jsx";
 import { ResultsPage } from "./pages/ResultsPage.jsx";
+import { SecurityHistoryPage } from "./pages/SecurityHistoryPage.jsx";
 import { UnauthorizedPage } from "./pages/UnauthorizedPage.jsx";
 import { useThemeStore } from "./store/themeStore.js";
 import { useAuthStore } from "./store/authStore.js";
+import { io } from "socket.io-client";
+import { Logo } from "./components/Logo.jsx";
+import { GlobalLoader } from "./components/GlobalLoader.jsx";
+
+// Initialize socket connection
+export const socket = io(import.meta.env.VITE_API_URL || "http://localhost:4000", {
+  autoConnect: true,
+  reconnection: true,
+});
 
 const pageVariants = {
   initial: { opacity: 0, y: 16 },
@@ -32,6 +42,19 @@ function ProtectedRoute({ children, role }) {
 
   if (role && user.role !== role) {
     return <Navigate to="/unauthorized" replace />;
+  }
+
+  return children;
+}
+
+function PublicRoute({ children }) {
+  const { user } = useAuthStore();
+
+  if (user) {
+    if (user.role === "admin") {
+      return <Navigate to="/admin" replace />;
+    }
+    return <Navigate to="/vote" replace />;
   }
 
   return children;
@@ -66,7 +89,7 @@ function Layout({ children }) {
             className="group flex items-center gap-3"
           >
             <div className="rounded-lg bg-emerald-500/10 p-2 transition-transform group-hover:scale-110">
-              <ShieldCheck className="h-6 w-6 text-emerald-400" />
+              <Logo className="h-6 w-6" />
             </div>
             <div>
               <p className="text-sm font-bold tracking-tight text-slate-50">
@@ -184,13 +207,38 @@ function Layout({ children }) {
 
 export default function App() {
   const location = useLocation();
+  const [showLoader, setShowLoader] = React.useState(true);
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowLoader(false);
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (showLoader) {
+    return <GlobalLoader />;
+  }
 
   return (
     <Layout>
       <Routes location={location}>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/login" element={<LoginPage />} />
+        <Route path="/" element={
+          <PublicRoute>
+            <LandingPage />
+          </PublicRoute>
+        } />
+        <Route path="/register" element={
+          <PublicRoute>
+            <RegisterPage />
+          </PublicRoute>
+        } />
+        <Route path="/login" element={
+          <PublicRoute>
+            <LoginPage />
+          </PublicRoute>
+        } />
 
         {/* Protected Routes */}
         <Route path="/digilocker" element={
@@ -222,6 +270,11 @@ export default function App() {
         <Route path="/admin/logs" element={
           <ProtectedRoute role="admin">
             <LogsViewerPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/security-history" element={
+          <ProtectedRoute role="admin">
+            <SecurityHistoryPage />
           </ProtectedRoute>
         } />
         <Route path="/results/:id" element={
