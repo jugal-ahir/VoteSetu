@@ -7,8 +7,9 @@ import { useAuthStore } from "../store/authStore.js";
 
 export function LoginPage() {
   const [step, setStep] = React.useState(1); // 1 = credentials, 2 = OTP
-  const [form, setForm] = React.useState({ voterId: "", password: "", otp: "" });
+  const [form, setForm] = React.useState({ voterId: "", password: "", otp: "", captcha: "" });
   const [loading, setLoading] = React.useState(false);
+  const [captchaUrl, setCaptchaUrl] = React.useState(null);
   const [error, setError] = React.useState("");
   const navigate = useNavigate();
   const setAuth = useAuthStore((s) => s.setAuth);
@@ -18,7 +19,17 @@ export function LoginPage() {
     if (searchParams.get("session") === "expired") {
       setError("Your session has expired. Please login again.");
     }
+    fetchCaptcha();
   }, [searchParams]);
+
+  const fetchCaptcha = async () => {
+    try {
+      const res = await api.get("/auth/captcha");
+      setCaptchaUrl(res.data); // This will be the SVG string
+    } catch (err) {
+      console.error("Failed to fetch captcha", err);
+    }
+  };
 
   const onChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -32,6 +43,7 @@ export function LoginPage() {
       await api.post("/auth/login", {
         voterId: form.voterId,
         password: form.password,
+        captcha: form.captcha,
       });
       setStep(2);
     } catch (err) {
@@ -166,6 +178,42 @@ export function LoginPage() {
                   placeholder="••••••••"
                   className="w-full rounded-xl border border-slate-700 bg-slate-950/50 px-4 py-3 text-sm text-slate-100 outline-none transition-all focus:border-emerald-500/50 focus:ring-4 focus:ring-emerald-500/10"
                 />
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-medium uppercase tracking-wider text-slate-400">Verification CAPTCHA</label>
+                  <button
+                    type="button"
+                    onClick={fetchCaptcha}
+                    className="text-[10px] text-emerald-500 hover:text-emerald-400 font-bold uppercase transition-colors"
+                  >
+                    Refresh
+                  </button>
+                </div>
+                <div className="flex gap-4">
+                  <div className="flex-1 rounded-xl border border-slate-700 bg-slate-950/50 p-2 flex items-center justify-center overflow-hidden h-14">
+                    {captchaUrl ? (
+                      <div 
+                        dangerouslySetInnerHTML={{ __html: captchaUrl }} 
+                        className="w-full h-full flex items-center justify-center [&_svg]:max-w-full [&_svg]:h-auto !scale-90"
+                      />
+                    ) : (
+                      <div className="animate-pulse flex items-center justify-center text-[10px] text-slate-600 uppercase font-black tracking-widest bg-slate-800/20 w-full h-8 rounded-lg">
+                        Generating...
+                      </div>
+                    )}
+                  </div>
+                  <input
+                    name="captcha"
+                    value={form.captcha}
+                    onChange={onChange}
+                    required
+                    maxLength={6}
+                    placeholder="Code"
+                    className="w-24 rounded-xl border border-slate-700 bg-slate-950/50 px-4 py-3 text-center text-sm font-bold text-slate-100 outline-none transition-all focus:border-emerald-500/50 focus:ring-4 focus:ring-emerald-500/10"
+                  />
+                </div>
               </div>
               <button
                 type="submit"

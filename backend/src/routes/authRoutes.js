@@ -1,4 +1,5 @@
 import express from "express";
+import mongoose from "mongoose";
 import rateLimit from "express-rate-limit";
 import bcrypt from "bcryptjs";
 import { User } from "../models/User.js";
@@ -9,8 +10,76 @@ import { logSecurityEvent } from "../middleware/auditLogger.js";
 import { sha256 } from "../utils/crypto.js";
 import { v4 as uuidv4 } from "uuid";
 import { authorizeDocument, preAuthorizeId } from "../utils/dbWatcher.js";
+import svgCaptcha from "svg-captcha";
+
+import { requireAuth } from "../middleware/auth.js";
+import { AuditLog } from "../models/AuditLog.js";
 
 const router = express.Router();
+
+// Get personal security logs
+router.get("/me/security-logs", requireAuth, async (req, res, next) => {
+  try {
+    const logs = await AuditLog.find({ userId: req.user._id })
+      .sort({ createdAt: -1 })
+      .limit(10);
+    res.json({ status: "ok", logs });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Calculate personal security score
+router.get("/me/security-score", requireAuth, async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    let score = 40; // Base score
+    const details = [];
+
+    // DigiLocker Status
+    if (user.digilockerStatus === "VERIFIED") {
+      score += 30;
+      details.push({ factor: "DigiLocker Verified", weight: 30, status: "GOOD" });
+    } else {
+      details.push({ factor: "DigiLocker Identity", weight: 30, status: "PENDING" });
+    }
+
+    // Participation
+    if (user.votedElections && user.votedElections.length > 0) {
+      score += 10;
+      details.push({ factor: "Active Participation", weight: 10, status: "GOOD" });
+    }
+
+    // Login Consistency
+    const lastLogs = await AuditLog.find({ userId: req.user._id, action: "LOGIN_SUCCESS" })
+      .sort({ createdAt: -1 })
+      .limit(3);
+    
+    if (lastLogs.length >= 2) {
+      const sameIp = lastLogs.every(l => l.ip === lastLogs[0].ip);
+      const sameBrowser = lastLogs.every(l => l.browser === lastLogs[0].browser);
+      
+      if (sameIp && sameBrowser) {
+        score += 20;
+        details.push({ factor: "Login Consistency", weight: 20, status: "GOOD" });
+      } else {
+        details.push({ factor: "Location/Device Variance", weight: 20, status: "NEUTRAL" });
+      }
+    } else {
+      details.push({ factor: "New Account / Build Trust", weight: 20, status: "PENDING" });
+    }
+
+    res.json({
+      status: "ok",
+      score: Math.min(100, score),
+      details
+    });
+  } catch (err) {
+    next(err);
+  }
+});
 
 const loginLimiter = rateLimit({
   windowMs: 5 * 60 * 1000,
@@ -24,6 +93,26 @@ const otpLimiter = rateLimit({
   max: 20,
   standardHeaders: true,
   legacyHeaders: false,
+});
+
+router.get("/captcha", (req, res) => {
+  const captcha = svgCaptcha.create({
+    size: 6,
+    noise: 3,
+    color: true,
+    background: "#f8fafc", // Light background for contrast on dark theme
+  });
+  
+  // Store the captcha text in a signed cookie valid for 5 minutes
+  res.cookie("captcha", sha256(captcha.text.toLowerCase()), {
+    httpOnly: true,
+    signed: true,
+    maxAge: 5 * 60 * 1000,
+    sameSite: "lax",
+  });
+  
+  res.type("svg");
+  res.status(200).send(captcha.data);
 });
 
 router.post("/register/pre-check", async (req, res, next) => {
@@ -70,7 +159,17 @@ router.post("/register/verify-aadhar", async (req, res, next) => {
     }
 
     // Simulated OTP send
-    console.log(`Simulated Registration OTP for Aadhaar ${aadhaarId}: 123456`);
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    console.log(`Simulated Registration OTP for Aadhaar ${aadhaarId}: ${otp}`);
+    
+    // Store the hashed OTP in a signed cookie valid for 5 minutes
+    res.cookie("regOtp", sha256(otp), {
+      httpOnly: true,
+      signed: true,
+      maxAge: 5 * 60 * 1000,
+      sameSite: "lax",
+    });
+
     res.json({ status: "ok", message: "OTP sent to your Aadhar-linked mobile number." });
   } catch (err) {
     next(err);
@@ -86,10 +185,14 @@ router.post("/register", async (req, res, next) => {
         .json({ status: "error", message: "Missing required fields" });
     }
 
-    // Verify OTP (Fixed for demo)
-    if (otp !== "123456") {
-      return res.status(401).json({ status: "error", message: "Invalid OTP" });
+    // Verify OTP check
+    const storedOtpHash = req.signedCookies.regOtp;
+    if (!storedOtpHash || !otp || sha256(otp) !== storedOtpHash) {
+      return res.status(401).json({ status: "error", message: "Invalid or expired OTP" });
     }
+    
+    // Clear the registration OTP cookie
+    res.clearCookie("regOtp");
 
     const existing = await User.findOne({
       $or: [{ email }, { voterId }],
@@ -152,7 +255,21 @@ router.post("/register", async (req, res, next) => {
 
 router.post("/login", loginLimiter, async (req, res, next) => {
   try {
-    const { voterId, password } = req.body;
+    const { voterId, password, captcha } = req.body;
+    
+    // Verify Captcha
+    const storedCaptchaHash = req.signedCookies.captcha;
+    if (!storedCaptchaHash || !captcha || sha256(captcha.toLowerCase()) !== storedCaptchaHash) {
+      await logSecurityEvent({
+        req,
+        action: "LOGIN_CAPTCHA_FAILED",
+        risk: "LOW",
+        status: "WARNED",
+        details: { voterId },
+      });
+      return res.status(401).json({ status: "error", message: "Invalid or expired CAPTCHA" });
+    }
+
     if (!voterId || !password) {
       return res
         .status(400)

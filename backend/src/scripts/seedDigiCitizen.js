@@ -9,8 +9,8 @@ async function main() {
 
   const sampleRecords = [
     {
-      aadhaarId: "999988887777",
-      name: "Jugal Vaghmashi",
+      aadhaarId: "123456789012",
+      name: "Fairy Patel",
     },
   ];
 

@@ -2,6 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
+@keyframes dash {
+  to {
+    stroke-dashoffset: -20;
+  }
+}
+.animate-dash {
+  animation: dash 3s linear infinite;
+}
+
 body {
   @apply bg-slate-950 text-slate-50 antialiased;
 }

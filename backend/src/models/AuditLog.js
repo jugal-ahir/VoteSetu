@@ -17,6 +17,27 @@ const auditLogSchema = new mongoose.Schema(
     details: { type: Object },
     userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     userRole: { type: String },
+    userAgent: { type: String },
+    browser: { type: String },
+    os: { type: String },
+    device: { type: String },
+    location: {
+      city: { type: String },
+      country: { type: String },
+      coordinates: {
+        lat: { type: Number },
+        lng: { type: Number },
+      },
+    },
+    travelMetrics: {
+      isImpossible: { type: Boolean, default: false },
+      speedKmh: { type: Number },
+      distanceKm: { type: Number },
+      prevLocation: {
+        city: { type: String },
+        country: { type: String }
+      }
+    }
   },
   { timestamps: true }
 );

@@ -26,7 +26,7 @@ import { setupDatabaseWatcher } from "./utils/dbWatcher.js"; // Added import
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, {
+export const io = new Server(server, {
   cors: {
     origin: process.env.FRONTEND_URL || "http://localhost:5173", // Changed to FRONTEND_URL, removed methods
     credentials: true,
@@ -57,7 +57,7 @@ app.use(
 app.use(express.json()); // Removed limit
 // Detect potential SQL/NoSQL injection patterns before sanitization
 app.use(suspiciousPayloadDetector);
-app.use(cookieParser());
+app.use(cookieParser(process.env.COOKIE_SECRET || "votesetu-secret"));
 app.use(mongoSanitize());
 app.use(xss());
 

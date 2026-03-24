@@ -4,6 +4,7 @@ const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
 export const api = axios.create({
   baseURL: `${API_URL}/api`,
+  withCredentials: true,
   headers: {
     "Content-Type": "application/json",
   },
@@ -16,6 +17,13 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    // Add high-accuracy GPS if available
+    const gpsJson = sessionStorage.getItem("user-gps");
+    if (gpsJson) {
+      config.headers["x-user-coords"] = gpsJson;
+    }
+
     return config;
   },
   (error) => Promise.reject(error)

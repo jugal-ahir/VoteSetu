@@ -1,6 +1,6 @@
 import React from "react";
 import { Routes, Route, Navigate, Link, useLocation, useNavigate } from "react-router-dom";
-import { Moon, SunMedium, LogOut, User, History } from "lucide-react";
+import { Moon, SunMedium, LogOut, User, History, ShieldCheck, ShieldAlert } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { LandingPage } from "./pages/LandingPage.jsx";
 import { RegisterPage } from "./pages/RegisterPage.jsx";
@@ -13,10 +13,12 @@ import { LogsViewerPage } from "./pages/LogsViewerPage.jsx";
 import { UserHistoryPage } from "./pages/UserHistoryPage.jsx";
 import { ResultsPage } from "./pages/ResultsPage.jsx";
 import { SecurityHistoryPage } from "./pages/SecurityHistoryPage.jsx";
+import { SecurityCenterPage } from "./pages/SecurityCenterPage.jsx";
 import { UnauthorizedPage } from "./pages/UnauthorizedPage.jsx";
 import { useThemeStore } from "./store/themeStore.js";
 import { useAuthStore } from "./store/authStore.js";
 import { io } from "socket.io-client";
+import { useGeoLocation } from "./hooks/useGeoLocation.js";
 import { Logo } from "./components/Logo.jsx";
 import { GlobalLoader } from "./components/GlobalLoader.jsx";
 
@@ -148,6 +150,12 @@ function Layout({ children }) {
                     >
                       Logs
                     </Link>
+                    <Link
+                      to="/admin/security-center"
+                      className="text-slate-400 transition-colors hover:text-red-400 flex items-center gap-1 font-bold"
+                    >
+                      <ShieldAlert className="h-4 w-4" /> Security Center
+                    </Link>
                   </>
                 )}
                 <div className="flex items-center gap-3 border-l border-slate-800 pl-6">
@@ -208,6 +216,9 @@ function Layout({ children }) {
 export default function App() {
   const location = useLocation();
   const [showLoader, setShowLoader] = React.useState(true);
+  
+  // Activate high-accuracy geolocation
+  useGeoLocation();
 
   React.useEffect(() => {
     const timer = setTimeout(() => {
@@ -270,6 +281,11 @@ export default function App() {
         <Route path="/admin/logs" element={
           <ProtectedRoute role="admin">
             <LogsViewerPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/security-center" element={
+          <ProtectedRoute role="admin">
+            <SecurityCenterPage />
           </ProtectedRoute>
         } />
         <Route path="/admin/security-history" element={

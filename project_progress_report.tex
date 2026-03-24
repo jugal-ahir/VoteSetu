@@ -1,0 +1,284 @@
+\documentclass[11pt,a4paper]{article}
+
+% --- Packages ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{geometry}
+\geometry{margin=1in}
+\usepackage{xcolor}
+\usepackage{titlesec}
+\usepackage{tcolorbox}
+\usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{lastpage}
+\usepackage{fancyhdr}
+\usepackage[table]{xcolor}
+\usepackage{tikz}
+\usepackage{listings}
+\usetikzlibrary{shapes.geometric, arrows, positioning, shadow, backgrounds, mindmap}
+
+% --- Custom Colors ---
+\definecolor{primary}{HTML}{1A237E} % Deep Navy
+\definecolor{secondary}{HTML}{2E7D32} % Emerald Green
+\definecolor{accent}{HTML}{C62828} % Soft Red
+\definecolor{lightgray}{HTML}{F5F5F5}
+\definecolor{codebackground}{HTML}{F8F9FA}
+
+% --- Page Style ---
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{\color{primary}\textbf{VoteSetu: Comprehensive Project Analysis}}
+\lfoot{\small \textit{Cybersecurity Research Project | SEAS}}
+\rfoot{\small Page \thepage\ of \pageref{LastPage}}
+\renewcommand{\headrulewidth}{0.5pt}
+\renewcommand{\footrulewidth}{0.5pt}
+
+% --- Hyperref Setup ---
+\hypersetup{
+    colorlinks=true,
+    linkcolor=primary,
+    filecolor=secondary,      
+    urlcolor=secondary,
+    pdftitle={VoteSetu Comprehensive Progress Report},
+}
+
+% --- Custom Sections ---
+\titleformat{\section}
+  {\color{primary}\normalfont\Large\bfseries}
+  {\thesection}{1em}{}[{\titlerule[0.5pt]}]
+
+\titleformat{\subsection}
+  {\color{primary}\normalfont\large\bfseries}
+  {\thesubsection}{1em}{}
+
+% --- Listings Settings ---
+\lstset{
+  backgroundcolor=\color{codebackground},
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  frame=single,
+  rulecolor=\color{lightgray},
+  captionpos=b
+}
+
+% --- Document Start ---
+\begin{document}
+
+% --- Title Page ---
+\begin{titlepage}
+    \centering
+    \vspace*{1.5cm}
+    {\Huge \bfseries \color{primary} VoteSetu}\\[0.5cm]
+    {\Large \textit{A Secure, Transparent \& Real-time E-Voting Ecosystem}}\\[1.5cm]
+    
+    \begin{tcolorbox}[colback=primary, colframe=primary, arc=10pt, boxrule=2pt, center title, title=\color{white}\textbf{PROJECT PROGRESS REPORT}]
+        \centering \color{white} \Large Comprehensive Technical Analysis
+    \end{tcolorbox}
+    
+    \vspace{2cm}
+    
+    \begin{minipage}{0.4\textwidth}
+        \begin{flushleft} \large
+            \textbf{Group Members:}\\
+            \textcolor{primary}{Jugal Vaghmashi}\\
+            \textcolor{primary}{Virja Shah}\\
+            \textcolor{primary}{Dhruvi Doshi}
+        \end{flushleft}
+    \end{minipage}
+    \begin{minipage}{0.5\textwidth}
+        \begin{flushright} \large
+            \textbf{Course Instructor:}\\
+            \textit{Professor Kuntal Patel}
+        \end{flushright}
+    \end{minipage}
+    
+    \vfill
+    \begin{tcolorbox}[colframe=lightgray, colback=white, sidebyside, sidebyside align=top, boxrule=0.5pt]
+        \centering \small \textbf{Project Framework}\\ Node.js $\cdot$ React $\cdot$ MongoDB
+        \tcblower
+        \centering \small \textbf{Security Focus}\\ AES-256 $\cdot$ RSA $\cdot$ SHA chain
+    \end{tcolorbox}
+    \vspace{1cm}
+    \textbf{School of Engineering and Applied Sciences} \\
+    Academic Session: 2023-2024
+\end{titlepage}
+
+\newpage
+\tableofcontents
+\newpage
+
+% --- Section: Executive Summary ---
+\section{Project Overview \& Objectives}
+VoteSetu is an academic cybersecurity initiative aimed at developing a resilient e-voting platform that leverages modern cryptographic protocols to ensure election integrity. The system address three primary threats: identity fraudulent registration, database tampering by privileged insiders, and the non-verifiability of cast ballots.
+
+\subsection{Primary Technical Objectives}
+\begin{itemize}[label=\textcolor{secondary}{\textbullet}]
+    \item \textbf{High-Assurance Identity:} Leveraging DigiLocker-linked Aadhaar verification to anchor digital accounts to verifiable physical identities.
+    \item \textbf{Reactive Security Hub:} Implementation of an out-of-band sentinel that monitors the database at the document level to detect modifications not triggered by authorized application logic.
+    \item \textbf{Ballot Immutability:} Creating a receipt-based hash chain for every vote cast, ensuring that any insertion, deletion, or modification results in a cryptographically identifiable break.
+\end{itemize}
+
+% --- Section: Repository Structure ---
+\section{Project Repository Roadmap}
+The repository is structured into two primary silos: the RESTful API Backend and the SPA Frontend.
+
+\begin{tcolorbox}[colframe=secondary, colback=white, title=Directory Architecture]
+\small
+\begin{verbatim}
+/backend
+  /src
+    /config      - Database connection & security parameters
+    /middleware  - JWT Auth, Rate-limiting, Audit logging
+    /models      - Mongoose schema definitions (User, Vote, Election)
+    /routes      - API endpoint logic (Auth, Vote casting, Admin)
+    /utils       - Security sentinel (dbWatcher) & Cryptography helpers
+/frontend
+  /src
+    /components  - Reusable UI elements (Navbar, Modals, Cards)
+    /pages       - Core views (Landing, Admin, Booth, Security History)
+    /store       - Global state management (Zustand)
+\end{verbatim}
+\end{tcolorbox}
+
+% --- Section: System Architecture ---
+\section{Detailed System Architecture}
+The architecture is designed to be highly reactive, using \texttt{Socket.io} for live security feedback loops.
+
+\subsection{Architectural Component Diagram}
+\begin{center}
+\begin{tikzpicture}[node distance=2.5cm, auto, thick]
+    \tikzstyle{node} = [rectangle, draw, fill=blue!5, text width=8em, text centered, rounded corners, minimum height=3em]
+    \tikzstyle{sec} = [rectangle, draw, fill=red!5, text width=8em, text centered, rounded corners, minimum height=3em, dashed]
+    \tikzstyle{db} = [cylinder, draw, shape border rotate=90, fill=green!10, text width=4em, text centered, minimum height=4em]
+    \tikzstyle{line} = [draw, -latex', line width=1pt]
+
+    \node [node] (ui) {React Frontend (Client)};
+    \node [node, below of=ui] (api) {Express API (Gateway)};
+    \node [sec, left of=api, node distance=5cm] (watch) {Integrity Sentinel (Sentinel)};
+    \node [node, right of=api, node distance=5cm] (sock) {Socket.io (Event Hub)};
+    \node [db, below of=api] (mongo) {MongoDB (Store)};
+
+    \path [line] (ui) -- (api);
+    \path [line] (api) -- (mongo);
+    \path [line] (watch) -- (mongo);
+    \path [line, dashed, red] (watch) -- node[above]{Alert} (api);
+    \path [line] (api) -- (sock);
+    \path [line] (sock) -- (ui);
+\end{tikzpicture}
+\end{center}
+
+% --- Section: Technical Protocols ---
+\section{Core Security Protocols}
+
+\subsection{Voter Identity Workflow (Aadhaar/DigiLocker)}
+\begin{center}
+\begin{tikzpicture}[node distance=1.8cm, auto]
+    \tikzstyle{state} = [rectangle, draw, fill=primary!10, text width=10em, text centered, rounded corners]
+    \tikzstyle{arrow} = [draw, -latex', thick]
+
+    \node [state] (input) {Voter Submits Aadhaar};
+    \node [state, below of=input] (verify) {Fuzzy Match on Citizen Records};
+    \node [state, below of=verify] (otp) {Two-Factor OTP Verification};
+    \node [state, below of=otp] (receipt) {Generate Verification Receipt};
+
+    \path [arrow] (input) -- (verify);
+    \path [arrow] (verify) -- (otp);
+    \path [arrow] (otp) -- (receipt);
+\end{tikzpicture}
+\end{center}
+
+\subsection{The Voting Lifecycle (Encryption & Chaining)}
+When a voter selects a candidate, the system performs a multi-stage cryptographic operation:
+\begin{enumerate}
+    \item \textbf{AES Payload Encryption:} The ballot payload (ElectionID + CandidateID) is encrypted with AES-256 for confidentiality.
+    \item \textbf{RSA Key Wrap:} The AES key is encrypted with the Administrator's RSA Public Key.
+    \item \textbf{Hash Chaining:} The new vote's unique hash $H_n$ is computed as $\text{SHA256}(H_{n-1} + \text{EncryptedPayload})$. This creates a cryptographically linked ledger.
+\end{enumerate}
+
+% --- Section: Database Schema ---
+\section{Database Schema Documentation}
+Below are the key document schemas used to maintain integrity across the electoral process.
+
+\begin{table}[h!]
+    \centering
+    \small
+    \caption{Core MongoDB Collections}
+    \begin{tabular}{@{}lll@{}}
+        \toprule
+        \textbf{Collection} & \textbf{Primary Fields} & \textbf{Security Note} \\ \midrule
+        \texttt{users} & \texttt{voterId, role, passwordHash, digilockerStatus} & RBAC enabled \\
+        \texttt{votes} & \texttt{ballot, encryptedKey, hash, previousHash} & Immutably chained \\
+        \texttt{elections} & \texttt{name, candidates, status, resultsPublished} & Monitored by Sentinel \\
+        \texttt{tampering} & \texttt{collection, operation, documentId, timestamp} & Read-only logs \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+% --- Section: Implementation Status ---
+\section{Functional Implementation Progress}
+The current development cycle has achieved full integration of the security core.
+
+\begin{table}[h!]
+    \centering
+    \renewcommand{\arraystretch}{1.5}
+    \begin{tabular}{@{}lllc@{}}
+        \toprule
+        \textbf{Module} & \textbf{Technical Implementation} & \textbf{Milestone} & \textbf{Status} \\ \midrule
+        Auth Gateway & JWT/RBAC + Aadhar Fuzzy Matching & REACHED & \textcolor{secondary}{Done} \\
+        Voting Booth & RSA/AES Multi-layer Encryption & REACHED & \textcolor{secondary}{Done} \\
+        Security Hub & Continuous Database Watcher & REACHED & \textcolor{secondary}{Done} \\
+        Admin Portal & Election Management & IN-DEV & \textcolor{orange}{90\%} \\
+        Result Audit & Cryptographic Chain Validation & PLANNED & \textcolor{primary}{Next} \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\newpage
+% --- Section: Visual Documentation ---
+\section{System Interfaces \& Visualizations}
+
+\subsection{Voter Registration & Verification Dashboard}
+\begin{tcolorbox}[colframe=primary, colback=white, title=Secure Identity Linkage]
+    \textit{This dashboard provides the entry point for citizen verification. It handles Aadhaar masking and fuzzy name matching to ensure that the digital identity is verified against official records before registration.}
+    
+    \vspace{0.5cm}
+    \centering \includegraphics[width=0.9\linewidth]{reg_placeholder.png}
+    \small \textbf{Figure 1:} The registration workflow ensures that no "Phantom" voters can enter the system.
+\end{tcolorbox}
+
+\subsection{Real-time Administrative Sentinel (Logs Viewer)}
+\begin{tcolorbox}[colframe=accent, colback=white, title=Database Tampering Watcher]
+    \textit{The Sentinel interface displays live alerts. If a direct modification is made to the database (e.g., via MongoDB Compass), a red TAMPER\_ALERT is broadcasted to all logged-in administrators.}
+    
+    \vspace{0.5cm}
+    \centering \includegraphics[width=0.9\linewidth]{security_logs.png}
+    \small \textbf{Figure 2:} Real-time visualization of database integrity violations.
+\end{tcolorbox}
+
+\subsection{The Voting Booth Interface}
+\begin{tcolorbox}[colframe=secondary, colback=white, title=Secure E-Ballot Submission]
+    \textit{A minimalist, distraction-free environment for vote casting. Upon submission, the client-side encryption generates a receipt hash that the voter can save for future verification.}
+    
+    \vspace{0.5cm}
+    \centering \includegraphics[width=0.9\linewidth]{booth_placeholder.png}
+    \small \textbf{Figure 3:} User-centric and premium voting interface with Framer Motion transitions.
+\end{tcolorbox}
+
+% --- Section: Individual Contributions ---
+\section{Division of Labor \& Technical Contributions}
+
+\subsection{Jugal Vaghmashi: Systems & Security Lead}
+Architected the backend lifecycle, implemented the \texttt{dbWatcher} polling logic, and designed the cryptographic vote chaining protocol. Responsible for MongoDB schema enforcement and REST API optimization.
+
+\subsection{Virja Shah: Frontend Architecture & UX Lead}
+Designed the premium React UI with a focus on glassmorphism and real-time feedback. Integrated Socket.io listeners for live security events and built the responsive administrative dashboards.
+
+\subsection{Dhruvi Doshi: Identity Systems & Audit Lead}
+Spearheaded the DigiLocker simulation and Aadhaar verification workflow. Managed the session security through JWT/RBAC implementation and developed the comprehensive audit logging visualization.
+
+\section{Conclusion}
+VoteSetu stands as a robust prototype for high-integrity e-voting. By combining document-level snapshots with cryptographic chaining, the platform successfully eliminates the single point of failure traditionally found in database-backed electoral systems.
+
+\end{document}

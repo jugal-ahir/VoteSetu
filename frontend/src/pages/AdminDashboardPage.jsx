@@ -9,6 +9,7 @@ import {
   TrendingUp,
   Activity,
   Calendar,
+  ShieldCheck,
   ShieldAlert,
   Loader2,
   CheckCircle2,
@@ -368,6 +369,9 @@ export function AdminDashboardPage() {
           <p className="text-slate-400">real-time monitoring & administrative controls</p>
         </div>
         <div className="flex gap-3">
+          <Link to="/admin/security-center" className="flex items-center gap-2 rounded-xl border border-emerald-500/50 bg-emerald-900/10 px-4 py-2.5 text-sm font-bold text-emerald-400 hover:bg-emerald-900/20 transition-colors shadow-lg shadow-emerald-900/20">
+            <ShieldCheck className="h-4 w-4" /> Security Center
+          </Link>
           <Link to="/admin/logs" className="flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-800 px-4 py-2.5 text-sm font-semibold text-slate-200 hover:bg-slate-700 transition-colors">
             <ShieldAlert className="h-4 w-4" /> Security Logs
           </Link>
