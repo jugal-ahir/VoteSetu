@@ -31,3 +31,18 @@ Thumbs.db
 
 # Testing
 coverage/
+
+# Posters and Presentations
+poster.html
+presentation.html
+campaign_poster.html
+
+# LaTeX files
+*.tex
+*.aux
+*.log
+*.out
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.pdf
