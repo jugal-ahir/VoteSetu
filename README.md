@@ -1,5 +1,4 @@
 <div align="center">
-  <img src="logo" alt="VoteSetu Logo" width="200" height="200" />
   
   # 🔐 VoteSetu: Advanced Web Interface for the Democratic Process
   
@@ -32,10 +31,6 @@
 ### Security Command Center
 
 <img src="admin_dashboard.png" alt="Admin Dashboard" width="100%" />
-
-### Application Poster
-
-<img src="ProjectPoster.png" alt="VoteSetu Application Poster" width="100%" />
 
 ---
 
